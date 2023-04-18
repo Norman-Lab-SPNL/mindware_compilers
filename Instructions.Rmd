@@ -1,0 +1,102 @@
+---
+title: "Compiler Instructions"
+author: "Anita Restrepo"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r include = FALSE}
+knitr::opts_chunk$set(eval = FALSE)
+```
+
+Hi SPNL!
+
+Here are short instructions for how to use the R Mindware Compiler scripts.  
+
+# HRV Compiler  
+  
+## Step 1  
+Ensure all your Mindware files are in a single directory (aka folder) and that the name of each file includes the subject ID.  
+  
+## Step 2  
+Make sure you've installed the following packages as they are dependencies of the compiler. You can install them with `install.packages("<package name>")`.  
+  
+* `tidyverse`  
+* `readxl`  
+  
+## Step 3  
+Call the compiler file by including the following code/chunk in your analysis file:  
+```{r}
+source("HRV_compiler.R")
+```  
+*Note: Make sure the compiler file is saved to the same directory as your analysis file (or include the full directory address when calling the compiler file in `source()`).*  
+  
+## Step 4 
+Call the compile function. The function takes two arguments:  
+
+* `directory` (optional): If the data files are in a separate folder within the directory (or in a separate directory altogether), you can use this argument to override the default (which is the current working directory).  
+*Note: Make sure the directory your data files live in includes no extraneous excel/csv files so they don't get read in by the function against your will.*  
+* `vars_to_keep` (optional): a vector of the variables to extract from the data. Default is `c("RSA", "RMSSD")`.  
+*Note: If you choose to add extra variables to extract, make sure the names match exactly with the way they appear in the excel files that Mindware spits out so you don't get an error.*  
+  
+Here is the function call with default arguments:  
+```{r}
+full_data_df <- compile()
+```  
+  
+Here is the function call calling a subfolder of the current working directory and adding "Mean IBI" to the vector of variables I want to extract:  
+```{r}
+full_data_df <- compile(directory = paste0(getwd(), "/HRV_data"), vars_to_keep = c("RSA", "RMSSD", "Mean IBI"))
+```  
+  
+## Step 5  
+Now you can save the dataframe with all the subjects' data as a csv file.  
+```{r}
+write_csv(full_data_df, "full_data_df.csv")
+```
+  
+# PEP Compiler  
+  
+## Step 1  
+Ensure all your Mindware files are in a single directory (aka folder) and that the name of each file includes the subject ID.  
+  
+## Step 2  
+Make sure you've installed the following packages as they are dependencies of the compiler. You can install them with `install.packages("<package name>")`.  
+  
+* `tidyverse`  
+* `readxl`  
+  
+## Step 3  
+Call the compiler file by including the following code/chunk in your analysis file:  
+```{r}
+source("PEP_compiler.R")
+```  
+*Note: Make sure the compiler file is saved to the same directory as your analysis file (or include the full directory address when calling the compiler file in `source()`).*  
+  
+## Step 4 
+Call the compile function. The function takes two arguments:  
+
+* `directory` (optional): If the data files are in a separate folder within the directory (or in a separate directory altogether), you can use this argument to override the default (which is the current working directory).  
+*Note: Make sure the directory your data files live in includes no extraneous excel/csv files so they don't get read in by the function against your will.*  
+* `vars_to_keep` (optional): a vector of the variables to extract from the data. Default is `c("PEP")`.  
+*Note: If you choose to add extra variables to extract, make sure the names match exactly with the way they appear in the excel files that Mindware spits out so you don't get an error.*  
+  
+Here is the function call with default arguments:  
+```{r}
+full_data_df <- compile()
+```  
+  
+Here is the function call calling a subfolder of the current working directory and adding "Mean IBI" to the vector of variables I want to extract:  
+```{r}
+full_data_df <- compile(directory = paste0(getwd(), "/PEP_data"), vars_to_keep = c("PEP", "Mean IBI"))
+```  
+  
+## Step 5  
+Now you can save the dataframe with all the subjects' data as a csv file.  
+```{r}
+write_csv(full_data_df, "full_data_df.csv")
+```
+  
