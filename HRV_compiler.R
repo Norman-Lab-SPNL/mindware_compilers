@@ -7,7 +7,8 @@ compile <- function(directory = getwd(), vars_to_keep = c("RSA", "RMSSD"),
   directory = paste0(directory, "/")
   # obtain the excel file names
   files = c(list.files(directory, pattern = "*.xlsx$"))
-  
+  # convert resp_range from Hz to cycles per minute
+  resp_range <- resp_range*60
   # extract data for each excel file
   df_out <- data.frame(matrix(ncol = (length(vars_to_keep) + 3), nrow = 0))
   colnames(df_out) <- c(vars_to_keep, "resp_within_range", "Segment", "filename")
@@ -26,8 +27,6 @@ compile <- function(directory = getwd(), vars_to_keep = c("RSA", "RMSSD"),
     df2$Segment <- c(seq(1, nrow(df2)))
     # add filename column
     df2$filename <- filename
-    # convert resp_range from Hz to cycles per minute
-    resp_range <- resp_range*60
     # make new resp_within_range column
     df2$resp_within_range <- NA
     # check if respiration rates were collected

@@ -2,7 +2,8 @@ library(tidyverse)
 library(readxl)
 
 
-compile <- function(directory = getwd(), vars_to_keep = c("Segment Number", "RSA", "RMSSD")) {
+compile <- function(directory = getwd(), vars_to_keep = c("Segment Number", "RSA", "RMSSD"),
+                    resp_range = c(0.12, 0.4)) {
   directory = paste0(directory, "/")
   # obtain the excel file names
   files = c(list.files(directory, pattern = "*.xlsx$"))
@@ -15,7 +16,8 @@ compile <- function(directory = getwd(), vars_to_keep = c("Segment Number", "RSA
   if (!("Respiration Rate" %in% vars_to_keep)) {
     vars_to_keep <- c("Respiration Rate", vars_to_keep)
   }
-  
+  # convert resp_range from Hz to cycles per minute
+  resp_range <- resp_range*60
   # extract data for each excel file
   df_out <- data.frame(matrix(ncol = (length(vars_to_keep) + 1), nrow = 0))
   colnames(df_out) <- c(vars_to_keep, "filename")
@@ -45,6 +47,17 @@ compile <- function(directory = getwd(), vars_to_keep = c("Segment Number", "RSA
     names(df3) <- as_tibble(t(df2))[1,]
     # add filename column
     df3$filename <- filename
+    # make new resp_within_range column
+    df3$resp_within_range <- NA
+    # make respiration rate variable numeric
+    df3$`Respiration Rate` <- as.numeric(df3$`Respiration Rate`)
+    # check if respiration rates were collected
+    if (sum(is.na(df3$`Respiration Rate`)) != length(df3$`Respiration Rate`)) {
+      # check if rates within range for each segment
+      df3$resp_within_range <- ifelse((df3$`Respiration Rate` >= resp_range[1]) &
+                                        (df3$`Respiration Rate` <= resp_range[2]), 
+                                      1, 0)
+    }
     # append the subject data to the final df
     df_out = rbind(df_out, df3)
   }
