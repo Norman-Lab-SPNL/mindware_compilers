@@ -31,7 +31,7 @@ compile <- function(directory = getwd(), vars_to_keep = c("RSA", "RMSSD"),
     if (sum(is.na(df2$`Respiration Rate`)) != length(df2$`Respiration Rate`)) {
       # check if rates within range for each segment
       df2$resp_within_range <- ifelse((df2$`Respiration Rate` >= resp_range[1]) &
-                                        (df2$`Respiration Rate` <= resp_range[2]), 
+                                         (df2$`Respiration Rate` <= resp_range[2]), 
                                       1, 0)
     }
     # append the subject data to the final df

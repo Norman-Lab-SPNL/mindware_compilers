@@ -11,7 +11,7 @@
 
 <meta name="author" content="Anita Restrepo" />
 
-<meta name="date" content="2023-03-18" />
+<meta name="date" content="2023-05-21" />
 
 <title>Compiler Instructions</title>
 
@@ -1512,7 +1512,7 @@ div.tocify {
 
 <h1 class="title toc-ignore">Compiler Instructions</h1>
 <h4 class="author">Anita Restrepo</h4>
-<h4 class="date">2023-03-18</h4>
+<h4 class="date">2023-05-21</h4>
 
 </div>
 
@@ -1549,7 +1549,7 @@ calling the compiler file in <code>source()</code>).</em></p>
 </div>
 <div id="step-4" class="section level2">
 <h2>Step 4</h2>
-<p>Call the compile function. The function takes two arguments:</p>
+<p>Call the compile function. The function takes three arguments:</p>
 <ul>
 <li><code>directory</code> (optional): If the data files are in a
 separate folder within the directory (or in a separate directory
@@ -1563,14 +1563,25 @@ against your will.</em><br />
 extract from the data. Default is <code>c(&quot;RSA&quot;, &quot;RMSSD&quot;)</code>.<br />
 <em>Note: If you choose to add extra variables to extract, make sure the
 names match exactly with the way they appear in the excel files that
-Mindware spits out so you don’t get an error.</em></li>
+Mindware spits out so you don’t get an error.</em><br />
+</li>
+<li><code>resp_range</code> (optional): A vector
+(<code>c(lower_bound, upper_bound)</code>) with the lower and upper
+bounds of the range of acceptable respiration rates (in Hz). The
+function will check whether respiration rates were collected. The
+function will return an extra column (<code>resp_within_range</code>)
+with a value of 1 for each segment where the respiration rate is within
+the <code>resp_range</code>, 0 if it is not, or <code>NA</code> if the
+respiration rate was not recorded for that segment. The default is
+0.12-0.4 Hz.</li>
 </ul>
 <p>Here is the function call with default arguments:</p>
 <pre class="r"><code>full_data_df &lt;- compile()</code></pre>
 <p>Here is the function call calling a subfolder of the current working
-directory and adding “Mean IBI” to the vector of variables I want to
-extract:</p>
-<pre class="r"><code>full_data_df &lt;- compile(directory = paste0(getwd(), &quot;/HRV_data&quot;), vars_to_keep = c(&quot;RSA&quot;, &quot;RMSSD&quot;, &quot;Mean IBI&quot;))</code></pre>
+directory, adding “Mean IBI” to the vector of variables I want to
+extract, and changing the range for the acceptable respiration
+rates:</p>
+<pre class="r"><code>full_data_df &lt;- compile(directory = paste0(getwd(), &quot;/HRV_data&quot;), vars_to_keep = c(&quot;RSA&quot;, &quot;RMSSD&quot;, &quot;Mean IBI&quot;), resp_range = c(0.23, 0.56))</code></pre>
 </div>
 <div id="step-5" class="section level2">
 <h2>Step 5</h2>
