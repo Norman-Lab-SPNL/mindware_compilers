@@ -1,12 +1,13 @@
-library(tidyverse)
-library(readxl)
+library(tidyverse, warn.conflicts = FALSE)
+library(readxl, warn.conflicts = FALSE)
+
 
 VERSIONS <- list("3.2" = "3.2", "3.2.13" = "3.2", 
                  "2022-10-25" = "3.2", "2022" = "3.2",
                  "3.1" = "3.1", "3.1.7" = "3.1", "3.1.5" = "3.1",
                  "2021-08-01" = "3.1", "2021" = "3.1")
 
-PHYSIO_TYPES <- list("HRV" = "HRV", "RSA" = "HRV", "PNS" = "HRV", 
+PHYSIO_TYPES <- list("HRV" = "HRV", "RSA" = "HRV", "PNS" = "HRV", "RMSSD" = "HRV",
                      "IMP" = "IMP", "PEP" = "IMP", "SNS" = "IMP",
                      "EDA" = "EDA", "GSR" = "EDA")
 
@@ -25,22 +26,22 @@ compile <- function(directory = getwd(),
   if(physio_type %in% physio_types){
     physio_type <- physio_types[physio_type]
   } else {
-    print("Sorry, the physio_type you have entered is not currently supported.")
+    stop("Sorry, the physio_type you have entered is not currently supported.")
   }
   # get version label
   if(software_version %in% versions){
     software_version <- versions[software_version]
   } else {
-    print("Sorry, you have entered an invalid software version.")
+    stop("Sorry, you have entered an invalid software version.")
   }
   ############## Get File List
   # make directory path work on both windows and mac
   directory = fs::path_abs(directory)
   # obtain the excel file paths
-  print(directory)
   files = map_vec(list.files(directory, pattern = "*.xlsx$"), ~fs::path(directory, .x))
+  print("Files to be compiled: ")
   print(files)
-  
+  n_files = length(files)
   ############# Respiration (HRV only)
   if(physio_type == "HRV"){
     # convert resp_range from Hz to cycles per minute
@@ -54,45 +55,40 @@ compile <- function(directory = getwd(),
   
   ################# Process Files
   df_out <- tibble()
+  file_num = 1
   for(file in files){
+    print(str_c("Processing file ", as.character(file_num), " of ", as.character(n_files)))
     # get software version and mwi file name
-    metadata <- extract_metadata(file, software_version)
-    version_used <- metadata["version_used"]
-    print(version_used)
-    mwi_filename <-  metadata["mwi_filename"]
-    print(mwi_filename)
-    # return an error if versions don't match
-    version_match = compare_versions(version_used, 
-                                     software_version, versions)
+    metadata <- tryCatch({extract_metadata(file, "3.2")}, 
+                         error = function(e){extract_metadata(file, "3.1")})
+    
+    version_used <- as.character(metadata["version_used"])
+    mwi_filename <-  as.character(metadata["mwi_filename"])
+    # return a warning if versions don't match
+    if(as.character(versions[version_used]) != software_version){
+      warning(str_c("Wrong software_version entered. These data were generated with Mindware version ", 
+                    as.character(version_used)))
+    }
     # extract data and clean
-    dat <- extract_vars(file, software_version, vars_to_keep)
-    print(dat)
+    dat <- tryCatch({extract_vars(file, "3.2", vars_to_keep)},
+                    error = function(e) {extract_vars(file, "3.1", vars_to_keep)})
     # add resp_rate (HRV only)
     if(physio_type == "HRV"){
-      dat <- process_resp(dat, resp_range)
+      dat <- process_resp(dat, resp_range, file)
     }
-    print(dat)
     # append metadata columns
     dat <- add_metadata(dat, mwi_filename, file)
     # attach dat to df_out
     df_out <- bind_rows(df_out, dat)
+    file_num = file_num + 1
   }
   return(df_out)
 }
 
 
 ################################## HELPER FUNCTIONS #############################
-compare_versions <- function(version_used, software_version, versions){
-  if(as.character(versions[as.character(version_used)]) == software_version){
-    return(TRUE)
-  }else{
-    print(str_c("ERROR: wrong software_version entered. These data were generated with Mindware version ", 
-                as.character(version_used)))
-    return(FALSE)
-  }
-}
 
-process_resp <- function(df, resp_range){
+process_resp <- function(df, resp_range, file){
   # check if respiration was collected
   resp_collected <- (sum(is.na(df$`Respiration Rate`)) != length(df$`Respiration Rate`))
   
@@ -104,14 +100,16 @@ process_resp <- function(df, resp_range){
                                         1, 0))
     }
   else{
-    print("Warning: Respiration is not recorded in the data. Was this collected?")
+    warning(str_c("Respiration is not recorded in file: ", as.character(file)))
   }
   return(df)
 }
 
+
 extract_metadata <- function(file, software_version){
+  
   if(software_version == "3.1"){
-    dat <- read_excel(file, sheet = 1)
+    dat <- suppressMessages(read_excel(file, sheet = 1))
     mwi_filename <- dat %>%
       filter(Version == "File Name")
     mwi_filename <- mwi_filename[,2] %>% pull()
@@ -119,8 +117,8 @@ extract_metadata <- function(file, software_version){
     
   } else if(software_version == "3.2"){
     # Read "Settings" sheet to extract meta-data
-    settings <- read_excel(file, sheet = "Settings", 
-                           col_names = c("Setting", "Value"))
+    settings <- suppressMessages(read_excel(file, sheet = "Settings", 
+                           col_names = c("Setting", "Value")))
     version_used <- settings %>%
       filter(Setting == "Version") %>%
       select(Value) %>%
@@ -137,7 +135,6 @@ extract_metadata <- function(file, software_version){
 }
 
 add_metadata <- function(df, mwi_filename, file){
-  print(mwi_filename)
   df <- df %>%
     mutate("mwi_filename" := {{ mwi_filename }},
            excel_filename = as.character({{ file }})) %>%
@@ -151,13 +148,13 @@ extract_vars <- function(file, software_version, vars_to_keep){
     if (!("Segment Number" %in% vars_to_keep)) {
       vars_to_keep <- c("Segment Number", vars_to_keep)
     }
-    dat <- read_excel(file, sheet = 1) %>%
+    dat <- suppressMessages(read_excel(file, sheet = 1)) %>%
       filter(Version %in% vars_to_keep) %>%
       t(.) %>%
       as_tibble()
     
   } else if(software_version == "3.2"){
-    dat <- read_excel(file, sheet = 1) %>%
+    dat <- suppressMessages(read_excel(file, sheet = 1)) %>%
       filter(`Segment Number` %in% vars_to_keep) %>%
       t(.) %>%
       as_tibble(., rownames = "Segment")
@@ -166,7 +163,7 @@ extract_vars <- function(file, software_version, vars_to_keep){
   colnames(dat) <- dat[1,]
   # remove first row (colnames)
   dat <- dat[-1,] %>%
-    type_convert() %>%
+    suppressMessages(type_convert()) %>%
     rename(segment = "Segment Number")
   
   return(dat)
